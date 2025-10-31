@@ -1,0 +1,199 @@
+basic:
+  PRSubmissionSPEC:
+    - name: PR-title-check
+      condition: null
+      claim: Clear PR title
+      explain: The PR title should clearly describe the commit content in one sentence.
+
+    - name: PR-content-check
+      condition: null
+      claim: Detailed PR content
+      explain: The background and implementation principle is clearly explained in a paragraph.
+
+    - name: PR-consistency-check
+      condition: null
+      claim: Consistency between the actual code modification and the content description
+      explain: The content description is consistent with the actual code modification.
+
+    - name: PR-standard-check
+      condition: null
+      claim: Compliance with Gitee requirements
+      explain: Gitee requires that each defect scanning alarm and compliance scanning alarm be confirmed.
+
+    - name: PR-one-submission
+      condition: null
+      claim: One commit in a PR (recommended)
+      explain: If there are multiple commits in a PR, squash the commits into one to make the commit history concise. [[Gitee work flow](https://gitee.com/openeuler/community/blob/master/zh/contributors/Gitee-workflow.md)]
+
+    - name: PR-temp-check
+      condition: new-file-add
+      claim: No temporary files in a PR
+      explain: Temporary files or unnecessary files are not allowed in a PR.
+
+  CleanCode:
+    - name: static-check
+      condition: code-modified
+      claim: Compliant new code
+      explain: The modified code is written in {lang}. Use {checker} to check and clear alarms.
+
+  OpenSourceCompliance:
+    - name: license-check-001
+      condition: new-file-add
+      claim: License information contained in a new code file
+      explain: A code file must start with the information of copyright and license, which must be compatible with the existing license of the project.
+
+    - name: license-check-002
+      condition: license-change
+      claim: New license compatible with openEuler
+      explain: If license in the SPEC file is changed, ensure that the new license is compatible with openEuler.
+
+  SecurityPrivacy:
+    - name: sensitive-info-check
+      condition: code-modified
+      claim: No passwords, tokens, keys, and other sensitive information contained in the new code
+      explain: Sensitive data such as passwords is not allowed in committed code.
+
+  Compatibility:
+    - name: compatibility-check
+      condition: version-change
+      claim: New version compatible with earlier versions
+      explain: If the version defined in the SPEC file changes, compatibility must be considered when upgrading non-master branch software.
+
+src-openeuler:
+  PackageSubmission:
+    - name: PR-latest-version
+      condition: null
+      claim: Latest mainline version as the new version submitted to the master branch
+      explain: In principle, code committed to the master branch must be the latest version in the upstream community.
+
+    - name: PR-increamental-rls
+      condition: null
+      claim: Incremented version and release numbers
+      explain: Decreasing the version or release number will adversely affect the upgrade. If the version number remains unchanged, increase the release number. If the version increases, reset the release number to 0.
+
+    - name: PR-license
+      condition: null
+      claim: Correct license domain settings.
+      explain: In principle, the license should be listed in the SPDX License List.
+
+    - name: PR-source-integerity
+      condition: null
+      claim: Complete source package from a trusted upstream system
+      explain: Source0 should be a complete URL to a code hosting address of the upstream community. The binary file in the PR should be the same as the source package downloaded from the URL.
+
+    - name: PR-clean-description
+      condition: null
+      claim: Readable and clear description
+      explain: If the description is automatically captured and generated, make sure it is readable and clear.
+
+    - name: PR-openEuler-clean
+      condition: null
+      claim: No meaningless and redundant conditional macros
+      explain: The SPEC file should not contain conditional macros that are meaningless to the openEuler environment.
+
+    - name: PR-selftest
+      condition: null
+      claim: check content contained
+      explain: It is preferred that an RPM SPEC file includes self-testing cases.
+    - name: PR-doc
+      condition: null
+      claim: Separate -help subpackage required
+      explain: If a large amount of content is contained in documents, generate a separate -help subpackage.
+
+    - name: PR-changelog
+      condition: null
+      claim: Proper changelog
+      explain: The changelog format meets the requirements and records in the log are easy to read and understand.
+
+customization:
+  community:
+    - name: sanity_check
+      condition: sanity_check
+      claim: ""
+      explain: ""
+      cmd: "python3 ci-scripts/sanity_check.py ."
+      failed:
+        claim: "PR checked by the CI"
+        explain: "sanity_check.py founds an error in this PR. "
+      success:
+        claim: "All involved code repositories properly managed by SIGs"
+        explain: "All code repositories should be properly managed by competent SIGs. The same type software should be managed by the same SIG if possible. "
+      lgtm-chk:
+        claim: "Approved by {sig} maintainer"
+        explain: "At least one of {owners} must leave \"/lgtm\" in the PR review to indicate confirmation. "
+      dlt-chk:
+        claim: "Deletion of {repo} confirmed"
+        explain: "To ensure compatibility, the technical committee suggests that {repo} be moved to sig-recycle for a period of time to allow time for users to switch. "
+
+    - name: maintainer-add-explain
+      condition: maintainer-change
+      claim: "Objectively described competence of a maintainer candidate"
+      explain: "The PR contains evidence and proof of technical competence of the maintainer candidate and his/her activeness in the community. "
+
+    - name: maintainer-change-lgtm
+      condition: maintainer-change
+      claim: "Adding/deleting the maintainer approved by other maintainers of {sig}"
+      explain: "At least two of {owners} must leave \"/lgtm\" in the PR review, indicating agreement on accepting or removing the maintainer. "
+
+    - name: sig-update-lgtm
+      condition: sig-update
+      claim: "SIG information update approved by {sig}"
+      explain: "Check whether any one of {owners} leaves \"/lgtm\" in the PR review, indicating that the PR is approved. "
+
+    - name: repo-info-check
+      condition: repo-introduce
+      claim: "Upstream information of the code repository provided correctly"
+      explain: "Use the official website of the software community or provide the project website (such as GitHub) of the mainstream code hosting provider if no dedicated official website is available. Hosted repositories such as Maven repositories are not allowed to be used as official websites. "
+
+    - name: repo-name-check
+      condition: repo-introduce
+      claim: "Proper naming of the code repository"
+      explain: "Naming of the code repository must be consistent with that of the upstream official website or community. The name of any sub-module in the software package cannot be used as the code repository name. If the software is developed using a certain language, a prefix (such as python- or perl-) can be used for standardized management. "
+
+    - name: upstream-lifecycle-check
+      condition: repo-introduce
+      claim: "Upstream of the newly introduced code repository within its lifecycle"
+      explain: "In principle, software that has declined, reached the lifecycle end, or not been updated for more than five years should not be introduced to openEuler. If it is necessary, fork the repository and maintain it independently in the openEuler community. "
+
+    - name: repo-license-check
+      condition: repo-introduce
+      claim: "License of the newly introduced code repository compatible with openEuler"
+      explain: "openEuler accepts only software that can be integrated. "
+
+    - name: repo-copyright-check
+      condition: repo-introduce
+      claim: "Proper copyright information contained in the newly introduced code repository"
+      explain: "It is expected that introduced software has clear copyright information. "
+
+    - name: repo-ownership-check
+      condition: repo-ownership-change
+      claim: "{repos} handed over from **{sig1}** to **{sig2}**, with approval from at least one owner of each SIG"
+      explain: "At least one of {owners1} of **{sig1}** and one of {owners2} of **{sig2}** leave \"/lgtm\" in the PR review, indicating that the handover is agreed. "
+      to_recycle:
+        claim: "{repos} handed over from **{sig1}** to **{sig2}**, with approval from a representative of **sig-release-management**"
+        explain: "{repos} contain protected branches other than the master. At least one of {owners} of **sig-release-management** must leave \"/lgtm\" in the PR review, indicating that the handover is agreed. "
+
+    - name: branch-check
+      condition: new-branch-add
+      claim: "Approval from the release management SIG required for adding any non-master branch to the code repository"
+      explain: "Non-master branches in a code repository will be used for version release and building. At least one of {owners} should leave \"/lgtm\" in the PR review, indicating confirmation. "
+
+    - name: repo-blacklist-check
+      condition: repo-blacklist-change
+      claim: "Software package blacklist confirmation required"
+      explain: "Deleting an artifact repository or moving it to sig-recycle requires the confirmation of blacklist ([Blacklist-software](https://gitee.com/openeuler/community/blob/master/zh/technical-committee/governance/blacklist-software.yaml)). "
+
+    - name: sig-info-check
+      condition: sig-info-change
+      claim: "{sig} maintainer approval required for adding or modifying the sig-info.yaml file"
+      explain: "At least one of {maintainers} must leave \"/lgtm\" in the PR review, indicating that the addition or modification is approved. "
+
+    - name: new-members-confirmation
+      condition: new-members-add
+      claim: "The requests for adding members (including maintainers, committers, and repository administrators) in **sig-info.yaml** must be approved by all members to be added."
+      explain: "All of {new_members} need to comment \"/lgtm\" in this PR to confirm consent to member addition."
+
+    - name: committer-check
+      condition: committer-change
+      claim: "The requests for changes in a committer's permissions or in the repos maintained by a committer must be approved by the committer"
+      explain: "{committer} needs to comment \"/lgtm\" in this PR to confirm consent to the changes in the permissions or repos maintained."
