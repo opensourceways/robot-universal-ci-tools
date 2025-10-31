@@ -2,8 +2,7 @@
 
 import logging
 import re
-
-import requests
+from multiprocessing import Process
 
 from django.conf import settings
 
@@ -346,4 +345,8 @@ def call(owner: str,
                                access_token=access_token,
                                pr_id=pr_id
                                )
-    return service.run(action)
+    if settings.DEBUG:
+        return service.run(action)
+    else:
+        p = Process(target=service.run, args=(action,))
+        p.start()

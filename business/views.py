@@ -1,9 +1,7 @@
 #!-*- utf-8 -*-
 
 import logging
-from multiprocessing import Process
 
-from django.shortcuts import render
 from django.http import HttpResponse
 from django.views.generic import View
 from django.utils.decorators import method_decorator

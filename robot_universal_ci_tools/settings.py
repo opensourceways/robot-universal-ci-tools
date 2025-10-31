@@ -10,6 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import os
+import sys
+import json
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -19,11 +22,30 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-pmv%x(598l#^0vk96c0+!6&%ch^)abo^(1yciywv@7b(jlx585'
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+
+
+def load_config():
+    config_path = "/vault/secrets/config.json" if not DEBUG else f"{BASE_DIR}/config_test.json"
+    if not os.path.exists(config_path):
+        print("config file not found, exit...")
+        sys.exit()
+
+    with open(config_path, "r") as f:
+        config = json.load(f)
+
+    if not DEBUG:
+        os.remove(config_path)
+
+    return config
+
+
+Config = load_config()
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = Config.get("SECRET_KEY")
+ACCESS_TOKEN=Config.get("ACCESS_TOKEN")
 
 ALLOWED_HOSTS = []
 
