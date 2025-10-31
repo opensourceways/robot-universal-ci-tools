@@ -1,4 +1,7 @@
+#!-*- utf-8 -*-
+
 import logging
+from multiprocessing import Process
 
 from django.shortcuts import render
 from django.http import HttpResponse
@@ -8,7 +11,9 @@ from django.utils.decorators import method_decorator
 from common.decorator import permission_check_decorator
 from common.base_response import BadRequestResponse, OkResponse
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s: %(message)s")
+from business.service import call
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s: %(message)s")
 
 
 class HealthCheckView(View):
@@ -27,23 +32,24 @@ class CommunityPRCIView(View):
     """
 
     def post(self, request, *args, **kwargs):
-        hook_name = request.JSON.get('hook_name')
-        action = request.JSON.get('action')
-        pr_url = request.JSON.get("pull_request", {}).get("html_url")
+        pr_url: str = request.JSON.get("merge_request", {}).get("url")
 
-        logging.info(f"Request detail: {{ \"hook name\": {hook_name}, \"action\": {action}, \"pr_url\": {pr_url} }}")
+        logging.info(f"PR link: {pr_url}")
 
-        if request.InvalidRequest:
+        if not pr_url or request.InvalidRequest:
             return BadRequestResponse()
 
-        #
-        if request.IsPRCreatOROpenEvent:
+        owner, repo, _, pr_id = pr_url.replace("https://gitcode.com/", "").split("/")
+        if request.IsPRCreatOROpenEvent:  # PR创建或者打开事件
+            call(owner, repo, "", pr_id, "create")
+
+        elif request.IsPRUpdateEvent:  # PR更新事件
             pass
 
-        elif request.IsPRUpdateEvent:
+        elif request.IsCommentEvent:  # 评论事件
             pass
 
-        elif request.IsCommentEvent:
-            pass
+        else:
+            return BadRequestResponse(msg="Invalid Event")
 
         return OkResponse()

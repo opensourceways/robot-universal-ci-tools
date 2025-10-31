@@ -1,11 +1,15 @@
 #!-*- utf-8 -*-
 
 import json
+import logging
+
 from django.http import JsonResponse
 from common.base_response import BadRequestResponse
 
-HookNameSet = ['merge_request_hooks', 'note_hooks']
-ActionSet = ['open', 'comment', 'update']
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s: %(message)s")
+
+EventTypeSet = ["merge_request", "note"]
+ActionSet = ["open", "reopen", "update"]
 
 
 def permission_check_decorator(func):
@@ -17,24 +21,26 @@ def permission_check_decorator(func):
 
         data = json.loads(request.body)
 
-        hook_name, action = data.get('hook_name'), data.get('action')
+        event_type, action = data.get("event_type"), data.get("merge_request", {}).get("action")
 
-        if not hook_name or not action:
+        logging.info(f"Event_type: {event_type}, action: {action}")
+
+        if not event_type or not action:
             return BadRequestResponse()
 
-        if hook_name not in HookNameSet or action not in ActionSet:
+        if event_type not in EventTypeSet or action not in ActionSet:
             return BadRequestResponse()
 
         request.JSON = data
 
         # 非法请求
-        request.InvalidRequest = True if (not hook_name or not action or not pr_url) else False
+        request.InvalidRequest = True if (not event_type or not action) else False
         # PR创建或者打开事件
-        request.IsPRCreatOROpenEvent = True if (hook_name == 'merge_request_hooks' and action == 'open') else False
+        request.IsPRCreatOROpenEvent = True if (event_type == "merge_request" and action in ["open", "reopen"]) else False
         # PR更新事件
-        request.IsPRUpdateEvent = True if (hook_name == 'merge_request_hooks' and action == 'update') else False
+        request.IsPRUpdateEvent = True if (event_type == "merge_request" and action == "update") else False
         # 评论事件
-        request.IsCommentEvent = True if (hook_name == 'note_hooks' and action == 'comment') else False
+        request.IsCommentEvent = True if (event_type == "note" and action == "open") else False
 
         return func(request, *args, **kwargs)
 
