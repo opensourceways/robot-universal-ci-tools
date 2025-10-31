@@ -11,8 +11,8 @@ current_pwd="$(pwd)"
 repo_url="https://gitcode.com/${owner}/${repo}.git"
 
 # init work dir
-if [ -d "${work_dir}" ]; then
-    mkdir "${work_dir}"
+if [ ! -d "${work_dir}" ]; then
+    mkdir -p "${work_dir}"
 fi
 
 cd "${work_dir}" || exit

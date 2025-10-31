@@ -2,6 +2,7 @@
 
 import logging
 
+from django.conf import settings
 from django.http import HttpResponse
 from django.views.generic import View
 from django.utils.decorators import method_decorator
@@ -39,7 +40,7 @@ class CommunityPRCIView(View):
 
         owner, repo, _, pr_id = pr_url.replace("https://gitcode.com/", "").split("/")
         if request.IsPRCreatOROpenEvent:  # PR创建或者打开事件
-            call(owner, repo, "", pr_id, "create")
+            call(owner, repo, settings.ACCESS_TOKEN, pr_id, "create")
 
         elif request.IsPRUpdateEvent:  # PR更新事件
             pass

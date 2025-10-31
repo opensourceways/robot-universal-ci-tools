@@ -2,3 +2,4 @@ venv
 .idea
 **__pycache__**
 pycharm_helper
+config_test.json

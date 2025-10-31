@@ -7,7 +7,7 @@ from multiprocessing import Process
 from django.conf import settings
 
 from common.gitcode import GitcodeApp
-from common.func import has_chinese_regex, load_yaml, exec_cmd, clean_up
+from common.func import has_chinese_regex, load_yaml, exec_cmd
 from common.config import CheckListHeader_ZH, Category_ZH, CheckListHeader_EN, Category_EN, FAILURE_COMMENT, \
     PR_CONFLICT_COMMENT, REVIEW_STATUS, WaitConFirmLabel
 
@@ -165,8 +165,6 @@ class PRHandlerService:
             for item in items:
                 condition, name = item.get("condition"), item.get("name")
                 claim, explain = item.get("claim"), item.get("explain")
-
-                line = self.format_checklist_item(category, claim, explain)
                 # 添加静态检查 item
                 if condition == "code-modified" and name == "static-check":
                     _dict = self.check_programing_language(branch)
@@ -175,6 +173,7 @@ class PRHandlerService:
                         continue
 
                     _lg, _er = "/".join(_dict.keys()), "/".join(_dict.values())
+                    line = self.format_checklist_item(category, claim, explain)
                     res.append(line.format(lang=_lg, checker=_er))
                 # 是否有新增文件
                 elif condition == "new-file-add" and not self.has_add_file(branch):
@@ -185,6 +184,7 @@ class PRHandlerService:
                         self.has_modify_spec_file(branch, "Version"):
                     continue
                 else:
+                    line = self.format_checklist_item(category, claim, explain)
                     res.append(line)
 
         return "".join(res)
@@ -237,7 +237,7 @@ class PRHandlerService:
         :return: review comment内容
         """
         branch = pr_detail.get("base", {}).get("label")
-        if pr_detail.get("mergeable"):
+        if not pr_detail.get("mergeable"):
             return PR_CONFLICT_COMMENT.format(owner=pr_detail.get("user", {}).get("login"))
 
         # review header
@@ -267,11 +267,12 @@ class PRHandlerService:
         key = self.checklist_header[3:47]
         flag = False
         for comment in comments:
-            if key in comment and not flag:
+            body = comment.get("body", "")
+            if key in body and not flag:
                 flag = True
                 continue
-            elif key in comment and flag:
-                comment_id = ""
+            elif key in body and flag:
+                comment_id = comment.get("id")
                 self.gitcode_app.delete_comment(comment_id)
 
     def add_wait_confirm_label(self, comment: str):
@@ -326,7 +327,7 @@ class PRHandlerService:
             self.add_wait_confirm_label(comment)
 
             # 清除环境
-            clean_up(self.repo_dir)
+            exec_cmd([f"{self.root_dir}/tools/clean_up.sh", self.repo_dir])
             logging.info("push review list success")
 
             return True

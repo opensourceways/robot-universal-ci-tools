@@ -52,21 +52,3 @@ def exec_cmd(cmd: list[str]) -> tuple[int, str]:
         return 1, ""
 
     return 0, out
-
-
-def clean_up(path) -> bool:
-    """
-    删除文件或者目录
-    :param path:
-    :return: 是否删除成功
-    """
-    result = subprocess.run([f"rm -rf {path}"],
-                            capture_output=True,
-                            text=True,
-                            )
-    code, out, err = result.returncode, result.stdout, result.stderr
-    if code != 0:
-        logging.info(f"some err happened, please check: {err}")
-        return False
-
-    return True
