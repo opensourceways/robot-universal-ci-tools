@@ -4,4 +4,4 @@ venv
 pycharm_helper
 config_test.json
 db.sqlite3
-.data
+.data/*
