@@ -11,7 +11,10 @@ current_pwd="$(pwd)"
 
 cd "${work_dir}/${repo}" || exit
 
+# 实际: git diff $args remotes/origin/${branch} $target_file
+
 cmd="git diff "
+
 if [ "${args}" ]; then
   cmd+="${args}"
 fi

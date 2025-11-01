@@ -23,7 +23,7 @@ if [ -d "${repo}" ]; then
 fi
 
 # clone repo
-git clone --depth 100 "${repo_url}"
+git clone --depth 1 "${repo_url}"
 cd "${repo}" || exit
 git checkout "${branch}"
 git pull

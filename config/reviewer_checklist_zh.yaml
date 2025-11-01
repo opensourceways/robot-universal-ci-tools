@@ -17,13 +17,13 @@ basic:
 
     - name: PR-standard-check
       condition: null
-      claim: PR符合gitee的规范检查要求
-      explain: 码云对提交的缺陷扫描、规范扫描告警每一条都需要确认。
+      claim: PR符合gitcode的规范检查要求
+      explain: Gitcode对提交的缺陷扫描、规范扫描告警每一条都需要确认。
 
     - name: PR-one-submission
       condition: null
       claim: 建议PR中只有一次提交
-      explain: 如果PR中包含多次提交，建议整合成一个，保持提交记录整洁。[[Gitee work flow](https://gitee.com/openeuler/community/blob/master/zh/contributors/Gitee-workflow.md)]
+      explain: 如果PR中包含多次提交，建议整合成一个，保持提交记录整洁。[[Gitcode work flow](https://gitcode.com/openeuler/community/blob/master/zh/contributors/Gitee-workflow.md)]
 
     - name: PR-temp-check
       condition: new-file-add
@@ -181,7 +181,7 @@ customization:
     - name: repo-blacklist-check
       condition: repo-blacklist-change
       claim: "软件包Blacklist确认"
-      explain: "制品仓被删除或移到sig-recycle，需要完成Blacklist([Blacklist-software](https://gitee.com/openeuler/community/blob/master/zh/technical-committee/governance/blacklist-software.yaml))确认。"
+      explain: "制品仓被删除或移到sig-recycle，需要完成Blacklist([Blacklist-software](https://gitcode.com/openeuler/community/blob/master/zh/technical-committee/governance/blacklist-software.yaml))确认。"
 
     - name: sig-info-check
       condition: sig-info-change

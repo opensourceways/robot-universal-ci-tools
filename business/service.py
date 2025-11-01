@@ -43,7 +43,7 @@ class PRHandlerService:
         :params pr_detail: pr 详情
         :return
         """
-        title = pr_detail.get("tile", "")
+        title = pr_detail.get("title", "")
         body = pr_detail.get("body", "")
         if not has_chinese_regex(title) and not has_chinese_regex(body):
             self.is_cn = False
@@ -214,19 +214,252 @@ class PRHandlerService:
 
         return "".join(res)
 
-    def community_review(self, checklist: dict) -> str:
+    def load_remote_yaml(self, path: str) -> dict:
+        """
+        加载 remote path路径下yaml文件
+        :param path: 仓库相对路径
+        :return:
+        """
+        # 切换到master分支， 并加载master分支sig信息, 再恢复环境
+        cmd = [f"{self.root_dir}/tools/git_checkout.sh", self.repo, "master", self.repo_dir]
+        _, _ = exec_cmd(cmd)
+
+        remote_sig_info = load_yaml(f"{self.repo_dir}/{path}")
+
+        cmd = [f"{self.root_dir}/tools/git_checkout.sh", self.repo, f"tmp_pr_{self.pr_id}", self.repo_dir]
+        _, _ = exec_cmd(cmd)
+
+        return remote_sig_info
+
+    def maintainer_changed_sigs(self, diff_files: list[str]) -> dict:
+        """
+        查找sig maintainer 有变化的sig; 修改 sig 的 maintainers需要 @SIG原所有 maintainers
+        :param diff_files: 有变动的文件名称列表
+        :return: key: sig-name, value: remote sig maintainers
+        """
+        sigs = {}
+        for line in diff_files:
+            status, file = re.split(r"\s+", line)
+            if status != "M":
+                continue
+
+            if file.startswith("sig/") and file.endswith("/sig-info.yaml"):
+                sig_name = file.split("/")[1]
+                sig_info = load_yaml(f"{self.repo_dir}/{file}")
+                maintainers = sig_info.get("maintainers", [])
+                maintainer_ids = [x.get("gitee_id") for x in maintainers]  # todo
+
+                remote_sig_info = self.load_remote_yaml(file)
+                remote_maintainers = remote_sig_info.get("maintainers", [])
+                remote_maintainer_ids = [x.get("gitee_id") for x in remote_maintainers]  # todo
+
+                if set(maintainer_ids) != set(remote_maintainer_ids):
+                    owners = [f"@{x}" for x in remote_maintainer_ids]
+                    sigs[sig_name] = owners
+
+        return sigs
+
+    def sig_info_changed(self, diff_files: list[str]) -> dict:
+        """
+        检查有变化的 SIG, 并需要 @SIG原所有 maintainers
+        :param diff_files: 有变动的文件名称列表
+        :return: key: sig-name, value: remote sig maintainers
+        :return:
+        """
+        sigs = {}
+        for line in diff_files:
+            status, file = re.split(r"\s+", line)
+            if status not in ["A", "M"] or file == "sig/sigs.yaml" or not file.startswith("sig/"):
+                continue
+
+            sig_name = file.split("/")[1]
+
+            if sig_name == "sig-template":
+                continue
+
+            remote_sig_info = self.load_remote_yaml(f"sig/{sig_name}/sig-info.yaml")
+
+            remote_maintainers = remote_sig_info.get("maintainers", [])
+            remote_maintainer_ids = [x.get("gitee_id") for x in remote_maintainers]  # todo
+
+            owners = [f"@{x}" for x in remote_maintainer_ids]
+            sigs[sig_name] = owners
+
+        return sigs
+
+    @staticmethod
+    def is_repo_add(diff_files: list[str]) -> bool:
+        """
+        检查是否有 repo.yaml 变动
+        :param diff_files: 有变动的文件名称列表
+        :return:
+        """
+        for line in diff_files:
+            status, file = re.split(r"\s+", line)
+
+            if status == "A" and file.startswith("sig") and file.endswith(".yaml") and len(file.split("/")) == 5 \
+                    and file.split("/")[2] in ["openeuler", "src-openeuler"]:
+                return True
+
+        return False
+
+    @staticmethod
+    def sig_recycle_changed(diff_files: list[str]) -> bool:
+        """
+        检测src-openeuler是否有文件被删除或者移除到 sig-recycle
+        :param diff_files: 有变动的文件名称列表
+        :return:
+        """
+
+        delete_set, add_to_recycle_set, add_to_other_set = set(), set(), set()
+        for line in diff_files:
+            status, file = re.split(r"\s+", line, maxsplit=1)
+
+            # 更换路径, eg: R100 sig/A/test.yaml sig/B/test.yaml
+            if status == "R100":
+                file_tuple = re.split(r"\s+", file)
+                if len(file_tuple) != 2:
+                    continue
+                route_lst = file_tuple[1].split("/")
+                if len(route_lst) > 2 and route_lst[0] == "sig" and route_lst[1] == "sig-recycle" \
+                        and route_lst[2] == "src-openeuler":
+                    return True
+
+            if file.startswith("sig/") and file.endswith(".yaml"):
+                if status == "D":  # 删除
+                    route_lst = file.split("/")
+                    if len(route_lst) > 2 and route_lst[2] == "src-openeuler":
+                        delete_set.add(route_lst[-1])
+                elif status == "A":  # 新增
+                    route_lst = file.split("/")
+                    if len(route_lst) <= 2 or route_lst[2] != "src-openeuler":
+                        continue
+                    if route_lst[1] == "sig-recycle":
+                        add_to_recycle_set.add(route_lst[-1])
+                    else:
+                        add_to_other_set.add(route_lst[-1])
+
+        return bool(delete_set - add_to_other_set) or bool(add_to_recycle_set)
+
+    def repo_sig_change(self, item: dict):
+        """
+        检查 repo.yaml 是否转移sig
+        :param item: yaml.load -> config.review_checklist_**.yaml .customization. community: repo-ownership-check
+        :return:
+        """
+        res = []
+        # todo
+        return res
+
+    def committer_change(self,
+                         diff_files: list,
+                         category: str,
+                         claim: str,
+                         explain: str,
+                         author: str) -> list:
+        """
+        committer 有变更
+        :param diff_files: 有变动的文件名称列表
+        :param category: checklist 类别
+        :param claim: item.claim
+        :param explain: item.explain
+        :param author: pr 作者
+        :return:
+        """
+
+        def _deal_with_commit(repo_inf: list, res_map: dict):
+            """
+            处理后的 res_map key: git id, value: repos
+            """
+            for item in repo_inf:
+                _repos, _committers = item.get("repo", []), item.get("committers", [])
+                [res_map.setdefault(x.get("gitee_id"), []).extend(_repos) for x in _committers]
+
+        changed_committer_ids = set()
+        for line in diff_files:
+            status, file = re.split(r"\s+", line)
+            committer_map, remote_committer_map = dict(), dict()
+            if status != "M" and file.startswith("sig/") and file.endswith("/sig-info.yaml"):
+                repo_info: list = load_yaml(file).get("repositories", [])
+                remote_repo_info: list = self.load_remote_yaml(file).get("repositories", [])
+
+                _deal_with_commit(repo_info, committer_map)
+                _deal_with_commit(remote_repo_info, remote_committer_map)
+
+                for committer, repos in committer_map.items():
+                    remote_repos = remote_committer_map.get(committer, [])
+                    if sorted(repos) != sorted(remote_repos):
+                        changed_committer_ids.add(committer)
+
+                for remote_committer, remote_repos in remote_committer_map.items():
+                    repos = committer_map.get(remote_committer, [])
+                    if sorted(repos) != sorted(remote_repos):
+                        changed_committer_ids.add(remote_committer)
+
+        changed_committer_ids.remove(author) if author in changed_committer_ids else None
+
+        return [self.format_checklist_item(category, claim, explain).format(committer=x) for x in changed_committer_ids]
+
+    def community_review(self, checklist: dict, author: str) -> str:
         """
         定制化checklist, 仅针对 openeuler/community 仓
+        :param author: pr作者 gitcode id
         :param checklist:  yaml.load -> config.review_checklist_**.yaml .customization部分
         :return:
         """
         res = []
-        for repo, items in checklist.items():
+
+        cmd = [f"{self.root_dir}/tools/git_diff.sh", self.repo, "master", self.repo_dir, "--name-status", ""]
+        _, diff_files = exec_cmd(cmd)
+
+        lines = diff_files.splitlines()
+        maintainer_changed_sigs = self.maintainer_changed_sigs(lines)
+        sig_info_changed_sigs = self.sig_info_changed(lines)
+        is_repo_add = self.is_repo_add(lines)
+        is_recycle_sig_changed = self.sig_recycle_changed(lines)
+
+        category = self.category.get("customization")
+        for repo, items in checklist.items():  # 实际只有community仓
             if self.repo != repo:
                 continue
-            # todo
+
             for item in items:
-                pass
+
+                condition, name = item.get("condition"), item.get("name")
+                claim, explain = item.get("claim"), item.get("explain")
+                # 新增or删除 sig maintainer
+                if condition == "maintainer-change" and maintainer_changed_sigs:
+                    if name == "maintainer-add-explain":
+                        res.append(self.format_checklist_item(category, claim, explain))
+                    elif name == "maintainer-change-lgtm":
+                        for _sig, _maintainers in maintainer_changed_sigs.items():
+                            res.append(self.format_checklist_item(category, claim, explain).format(sig=_sig,
+                                                                                                   owners=_maintainers))
+                # sig 有变动
+                elif condition == "sig-update" and sig_info_changed_sigs:
+                    for _sig, _maintainers in sig_info_changed_sigs.items():
+                        if _sig in maintainer_changed_sigs.keys() or _sig == "sig-template":
+                            continue
+                        res.append(self.format_checklist_item(category, claim, explain).format(sig=_sig,
+                                                                                               owners=_maintainers))
+                # repo.yaml 新增或者变动
+                elif condition == "repo-introduce" and is_repo_add:
+                    res.append(self.format_checklist_item(category, claim, explain))
+                elif condition == "sanity_check":
+                    pass  # todo
+                elif condition == "repo-ownership-change":
+                    self.repo_sig_change(item)  # todo
+                elif condition == "new-branch-add":
+                    pass  # todo
+                elif condition == "new-members-add":
+                    pass  # todo
+                # 文件被删除或移除至 sig-recycle
+                elif condition == "repo-blacklist-change" and is_recycle_sig_changed:
+                    res.append(self.format_checklist_item(category, claim, explain))
+                elif condition == "sig-info-change":
+                    pass  # 应该和sig-update有重合
+                elif condition == "committer-change":
+                    res.extend(self.committer_change(lines, category,  claim, explain, author))
 
         return "".join(res)
 
@@ -237,6 +470,8 @@ class PRHandlerService:
         :return: review comment内容
         """
         branch = pr_detail.get("base", {}).get("label")
+        author = pr_detail.get("user", {}).get("login")
+
         if not pr_detail.get("mergeable"):
             return PR_CONFLICT_COMMENT.format(owner=pr_detail.get("user", {}).get("login"))
 
@@ -253,8 +488,8 @@ class PRHandlerService:
         # src-openeuler的检查，对应checklist src-openeuler部分
         if self.owner == "src-openeuler":
             review += self.src_openeuler_review(checklist.get("src-openeuler", {}), branch)
-
-        review += self.community_review(checklist.get("customization", {}))
+        # 定制化检查
+        review += self.community_review(checklist.get("customization", {}), author)
 
         return review
 

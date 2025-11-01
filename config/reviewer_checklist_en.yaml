@@ -17,13 +17,13 @@ basic:
 
     - name: PR-standard-check
       condition: null
-      claim: Compliance with Gitee requirements
-      explain: Gitee requires that each defect scanning alarm and compliance scanning alarm be confirmed.
+      claim: Compliance with Gitcode requirements
+      explain: Gitcode requires that each defect scanning alarm and compliance scanning alarm be confirmed.
 
     - name: PR-one-submission
       condition: null
       claim: One commit in a PR (recommended)
-      explain: If there are multiple commits in a PR, squash the commits into one to make the commit history concise. [[Gitee work flow](https://gitee.com/openeuler/community/blob/master/zh/contributors/Gitee-workflow.md)]
+      explain: If there are multiple commits in a PR, squash the commits into one to make the commit history concise. [[Gitcode work flow](https://gitcode.com/openeuler/community/blob/master/zh/contributors/Gitee-workflow.md)]
 
     - name: PR-temp-check
       condition: new-file-add
@@ -181,7 +181,7 @@ customization:
     - name: repo-blacklist-check
       condition: repo-blacklist-change
       claim: "Software package blacklist confirmation required"
-      explain: "Deleting an artifact repository or moving it to sig-recycle requires the confirmation of blacklist ([Blacklist-software](https://gitee.com/openeuler/community/blob/master/zh/technical-committee/governance/blacklist-software.yaml)). "
+      explain: "Deleting an artifact repository or moving it to sig-recycle requires the confirmation of blacklist ([Blacklist-software](https://gitcode.com/openeuler/community/blob/master/zh/technical-committee/governance/blacklist-software.yaml)). "
 
     - name: sig-info-check
       condition: sig-info-change
